@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TesoManager{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+  {% if usuario %}
+  <nav class="bg-slate-900 text-slate-100 no-print">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <a href="/" class="font-bold text-lg tracking-tight">💰 TesoManager</a>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <a href="/" class="hover:text-white text-slate-300">Inicio</a>
+        <a href="/movimientos" class="hover:text-white text-slate-300">Movimientos</a>
+        <a href="/reporte" class="hover:text-white text-slate-300">Reporte</a>
+        <a href="/periodos" class="hover:text-white text-slate-300">Periodos</a>
+        <a href="/configuracion" class="hover:text-white text-slate-300">Configuración</a>
+      </div>
+      <div class="ml-auto flex items-center gap-3 text-sm">
+        <span class="text-slate-400 hidden sm:inline">{{ usuario.nombre }}</span>
+        <a href="/logout" class="hover:text-white text-slate-300">Salir</a>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

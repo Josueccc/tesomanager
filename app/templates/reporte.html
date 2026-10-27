@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Reporte {{ resumen.titulo }} · TesoManager{% endblock %}
+{% set csv_qs = "periodo_id=" ~ resumen.periodo_id if resumen.periodo_id else "desde=" ~ resumen.desde.isoformat() ~ "&hasta=" ~ resumen.hasta.isoformat() %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4 no-print">
+  <h1 class="text-2xl font-bold">Reporte por periodo</h1>
+  <div class="flex flex-wrap items-end gap-2 text-sm">
+    <form method="get" action="/reporte" class="flex items-end gap-2">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Periodo</label>
+        <select name="periodo_id" class="border border-slate-300 rounded-lg px-2 py-1.5" onchange="this.form.submit()">
+          {% for p in periodos %}<option value="{{ p.id }}" {% if p.id==resumen.periodo_id %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+          {% if not periodos %}<option>— sin periodos —</option>{% endif %}
+        </select>
+      </div>
+      <button class="bg-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-300">Ver</button>
+    </form>
+    <form method="get" action="/reporte" class="flex items-end gap-2">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Rango libre</label>
+        <input name="desde" type="date" value="{{ resumen.desde.isoformat() }}" class="border border-slate-300 rounded-lg px-2 py-1.5">
+      </div>
+      <input name="hasta" type="date" value="{{ resumen.hasta.isoformat() }}" class="border border-slate-300 rounded-lg px-2 py-1.5">
+      <button class="bg-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-300">Ver</button>
+    </form>
+    <button type="button" onclick="window.print()" class="bg-slate-900 text-white rounded-lg px-3 py-1.5 hover:bg-slate-800">Imprimir / PDF</button>
+    <a href="/reporte/csv?{{ csv_qs }}" class="border rounded-lg px-3 py-1.5 hover:bg-slate-50">CSV</a>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow p-6">
+  <div class="border-b pb-3 mb-4">
+    <h2 class="text-xl font-bold">Reporte de {{ resumen.titulo }}</h2>
+    <p class="text-sm text-slate-500">
+      {{ resumen.desde.strftime('%d/%m/%Y') }} – {{ resumen.hasta.strftime('%d/%m/%Y') }} · Finanzas de la iglesia · TesoManager
+    </p>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-6">
+    <!-- Ofrendas -->
+    <section>
+      <h3 class="font-semibold text-sky-700 mb-2">Ofrendas</h3>
+      <table class="w-full text-sm">
+        <tr><td class="py-1">Total contado</td><td class="py-1 text-right font-medium">{{ resumen.ofrendas.total_bruto | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Recogido por el tesorero</td><td class="py-1 text-right">{{ resumen.ofrendas.total_recogido_tesorero | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Recogido por otra persona</td><td class="py-1 text-right">{{ resumen.ofrendas.total_no_recogido | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Excluido (evento/especial)</td><td class="py-1 text-right">{{ resumen.ofrendas.total_excluido | moneda }}</td></tr>
+        <tr class="border-t"><td class="py-1 font-medium">A entregar ({{ pct.pct_entrega_ofrenda }}%)</td><td class="py-1 text-right font-semibold text-emerald-600">{{ resumen.ofrendas.entrega_organizacion | moneda }}</td></tr>
+      </table>
+    </section>
+
+    <!-- Diezmos -->
+    <section>
+      <h3 class="font-semibold text-indigo-700 mb-2">Diezmos</h3>
+      <table class="w-full text-sm">
+        <tr><td class="py-1">Total contado</td><td class="py-1 text-right font-medium">{{ resumen.diezmos.total_bruto | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Recogido por el tesorero</td><td class="py-1 text-right">{{ resumen.diezmos.total_recogido_tesorero | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Recogido por otra persona</td><td class="py-1 text-right">{{ resumen.diezmos.total_no_recogido | moneda }}</td></tr>
+        <tr class="text-slate-500"><td class="py-1 pl-3">Excluido (evento/especial)</td><td class="py-1 text-right">{{ resumen.diezmos.total_excluido | moneda }}</td></tr>
+        <tr class="border-t"><td class="py-1 font-medium">A entregar ({{ pct.pct_entrega_diezmo }}%)</td><td class="py-1 text-right font-semibold text-emerald-600">{{ resumen.diezmos.entrega_organizacion | moneda }}</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <div class="mt-6 grid sm:grid-cols-2 gap-6">
+    <div class="bg-emerald-50 rounded-lg p-4">
+      <p class="text-sm text-slate-600">Total a entregar a la organización</p>
+      <p class="text-3xl font-bold text-emerald-700">{{ resumen.entrega_total | moneda }}</p>
+    </div>
+    <div class="bg-slate-50 rounded-lg p-4">
+      <p class="text-sm text-slate-600">Caja — reserva local (acumulada, no se entrega)</p>
+      <p class="text-3xl font-bold text-slate-800">{{ resumen.caja_saldo_acumulado | moneda }}</p>
+      {% if resumen.corte_fecha %}
+      <p class="text-xs text-slate-500 mt-1">Base del periodo: {{ resumen.caja_saldo_inicial | moneda }} (desde {{ resumen.corte_fecha.strftime('%d/%m/%Y') }})</p>
+      {% endif %}
+      <p class="text-xs text-slate-500 mt-1">Este periodo: donaciones {{ resumen.donaciones_mes | moneda }} − salidas {{ resumen.salidas_mes | moneda }} = {{ resumen.caja_neto_mes | moneda }}</p>
+    </div>
+  </div>
+
+  {% if resumen.donaciones or resumen.salidas %}
+  <div class="mt-6">
+    <h3 class="font-semibold mb-2">Movimientos de caja del periodo</h3>
+    <table class="w-full text-sm">
+      <thead class="text-slate-400 text-left"><tr><th class="py-1">Fecha</th><th>Concepto</th><th class="text-right">Monto</th></tr></thead>
+      <tbody>
+        {% for m in resumen.donaciones %}
+        <tr class="border-t border-slate-100"><td class="py-1">{{ m.fecha.strftime('%d/%m') }}</td><td>Donación — {{ m.origen or '' }}</td><td class="text-right text-emerald-600">+ {{ m.monto | moneda }}</td></tr>
+        {% endfor %}
+        {% for m in resumen.salidas %}
+        <tr class="border-t border-slate-100"><td class="py-1">{{ m.fecha.strftime('%d/%m') }}</td><td>Salida — {{ m.motivo or '' }}</td><td class="text-right text-red-600">- {{ m.monto | moneda }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="mt-6 border-t pt-4">
+    <h3 class="font-semibold mb-2">Comentarios del periodo</h3>
+    <form method="post" action="/reporte/comentario" class="no-print">
+      {% if resumen.periodo_id %}
+      <input type="hidden" name="periodo_id" value="{{ resumen.periodo_id }}">
+      {% else %}
+      <input type="hidden" name="anio" value="{{ resumen.desde.year }}">
+      <input type="hidden" name="mes" value="{{ resumen.desde.month }}">
+      {% endif %}
+      <textarea name="texto" rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Notas u observaciones del periodo…">{{ comentario_mensual }}</textarea>
+      <button class="mt-2 bg-slate-200 rounded-lg px-4 py-1.5 text-sm hover:bg-slate-300">Guardar comentario</button>
+    </form>
+    {% if comentario_mensual %}<p class="hidden print:block text-sm whitespace-pre-line">{{ comentario_mensual }}</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

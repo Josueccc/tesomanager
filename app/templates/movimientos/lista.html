@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Movimientos · TesoManager{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold">Movimientos</h1>
+  <a href="/movimientos/nuevo" class="bg-slate-900 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-slate-800">+ Nuevo</a>
+</div>
+
+<form method="get" action="/movimientos" class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap items-end gap-3 text-sm">
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Periodo</label>
+    <select name="periodo_id" class="border border-slate-300 rounded-lg px-2 py-1.5">
+      <option value="">— Rango libre —</option>
+      {% for p in periodos %}
+      <option value="{{ p.id }}" {% if periodo and p.id == periodo.id %}selected{% endif %}>{{ p.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Desde</label>
+    <input name="desde" type="date" value="{{ desde.isoformat() if desde else '' }}" class="border border-slate-300 rounded-lg px-2 py-1.5">
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Hasta</label>
+    <input name="hasta" type="date" value="{{ hasta.isoformat() if hasta else '' }}" class="border border-slate-300 rounded-lg px-2 py-1.5">
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Tipo</label>
+    <select name="tipo" class="border border-slate-300 rounded-lg px-2 py-1.5">
+      <option value="">Todos</option>
+      <option value="ofrenda" {% if tipo=='ofrenda' %}selected{% endif %}>Ofrenda</option>
+      <option value="diezmo" {% if tipo=='diezmo' %}selected{% endif %}>Diezmo</option>
+      <option value="donacion" {% if tipo=='donacion' %}selected{% endif %}>Donación a caja</option>
+      <option value="salida_caja" {% if tipo=='salida_caja' %}selected{% endif %}>Salida de caja</option>
+    </select>
+  </div>
+  <button class="bg-slate-200 rounded-lg px-4 py-1.5 font-medium hover:bg-slate-300">Filtrar</button>
+</form>
+<p class="text-xs text-slate-500 mb-4 -mt-2">
+  {% if periodo %}Mostrando el periodo <strong>{{ periodo.nombre }}</strong> ({{ periodo.fecha_inicio.strftime('%d/%m/%Y') }} – {{ (periodo.fecha_fin or hoy()).strftime('%d/%m/%Y') }}). Si eliges un periodo, ignora el rango de fechas.{% elif desde or hasta %}Rango {{ desde.strftime('%d/%m/%Y') if desde else '…' }} – {{ hasta.strftime('%d/%m/%Y') if hasta else '…' }}.{% else %}Mostrando todos los movimientos.{% endif %}
+</p>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slate-500 text-left">
+      <tr>
+        <th class="px-3 py-2">Fecha</th>
+        <th class="px-3 py-2">Tipo</th>
+        <th class="px-3 py-2 text-right">Monto</th>
+        <th class="px-3 py-2">Detalle</th>
+        <th class="px-3 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in movimientos %}
+      <tr class="border-t border-slate-100">
+        <td class="px-3 py-2 whitespace-nowrap">{{ m.fecha.strftime('%d/%m/%Y') }}</td>
+        <td class="px-3 py-2">
+          {% if m.tipo.value == 'ofrenda' %}<span class="text-sky-700">Ofrenda</span>
+          {% elif m.tipo.value == 'diezmo' %}<span class="text-indigo-700">Diezmo</span>
+          {% elif m.tipo.value == 'donacion' %}<span class="text-emerald-700">Donación</span>
+          {% else %}<span class="text-red-700">Salida</span>{% endif %}
+        </td>
+        <td class="px-3 py-2 text-right font-medium {% if m.tipo.value == 'salida_caja' %}text-red-600{% endif %}">
+          {% if m.tipo.value == 'salida_caja' %}-{% endif %}{{ m.monto | moneda }}
+        </td>
+        <td class="px-3 py-2 text-slate-500">
+          {% if m.tipo.value in ('ofrenda','diezmo') %}
+            {% if m.excluir_entrega %}<span class="inline-block bg-amber-100 text-amber-700 rounded px-1.5 text-xs">excluido de entrega</span>{% endif %}
+            {% if not m.recogido_por_tesorero %}<span class="inline-block bg-slate-100 text-slate-600 rounded px-1.5 text-xs">recogió: {{ m.recogido_por or '—' }}</span>{% endif %}
+          {% elif m.tipo.value == 'donacion' %}{{ m.origen or '' }}
+          {% else %}{{ m.motivo or '' }}{% endif %}
+          {% if m.comentario %}<span class="block text-xs text-slate-400 mt-0.5">💬 {{ m.comentario }}</span>{% endif %}
+        </td>
+        <td class="px-3 py-2 text-right whitespace-nowrap">
+          <a href="/movimientos/{{ m.id }}/editar" class="text-slate-600 hover:underline">Editar</a>
+          <form method="post" action="/movimientos/{{ m.id }}/eliminar" class="inline" onsubmit="return confirm('¿Eliminar este movimiento?')">
+            <button class="text-red-600 hover:underline ml-2">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-3 py-8 text-center text-slate-400">Sin movimientos en este periodo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Periodos · TesoManager{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h1 class="text-2xl font-bold">Periodos de reporte</h1>
+    <p class="text-slate-500 text-sm">Los reportes van por periodo, no por mes exacto. Un periodo abierto (sin fecha de fin) llega hasta hoy.</p>
+  </div>
+</div>
+
+<form method="post" action="/periodos/nuevo" class="bg-white rounded-xl shadow p-4 mb-6 flex flex-wrap items-end gap-3 text-sm">
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Nombre</label>
+    <input name="nombre" value="{{ nombre_sugerido }}" class="border border-slate-300 rounded-lg px-2 py-1.5 w-40">
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Inicio</label>
+    <input name="fecha_inicio" type="date" value="{{ inicio_sugerido.isoformat() }}" class="border border-slate-300 rounded-lg px-2 py-1.5">
+  </div>
+  <div>
+    <label class="block text-xs text-slate-500 mb-1">Fin <span class="text-slate-400">(vacío = en curso)</span></label>
+    <input name="fecha_fin" type="date" class="border border-slate-300 rounded-lg px-2 py-1.5">
+  </div>
+  <button class="bg-slate-900 text-white rounded-lg px-4 py-1.5 font-medium hover:bg-slate-800">+ Crear periodo</button>
+</form>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-slate-500 text-left">
+      <tr>
+        <th class="px-3 py-2">Nombre</th>
+        <th class="px-3 py-2">Inicio</th>
+        <th class="px-3 py-2">Fin</th>
+        <th class="px-3 py-2">Estado</th>
+        <th class="px-3 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in periodos %}
+      <tr class="border-t border-slate-100 align-top">
+        <td class="px-3 py-2">
+          <form method="post" action="/periodos/{{ p.id }}/editar" class="flex flex-wrap items-center gap-1">
+            <input name="nombre" value="{{ p.nombre }}" class="border border-slate-200 rounded px-1.5 py-1 w-32">
+            <input name="fecha_inicio" type="date" value="{{ p.fecha_inicio.isoformat() }}" class="border border-slate-200 rounded px-1.5 py-1">
+            <input name="fecha_fin" type="date" value="{{ p.fecha_fin.isoformat() if p.fecha_fin else '' }}" class="border border-slate-200 rounded px-1.5 py-1">
+            <button class="text-slate-600 hover:underline text-xs">Guardar</button>
+          </form>
+        </td>
+        <td class="px-3 py-2 whitespace-nowrap">{{ p.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+        <td class="px-3 py-2 whitespace-nowrap">{{ p.fecha_fin.strftime('%d/%m/%Y') if p.fecha_fin else '—' }}</td>
+        <td class="px-3 py-2">
+          {% if p.cerrado %}
+            <span class="inline-block bg-slate-100 text-slate-600 rounded px-1.5 text-xs">Cerrado</span>
+          {% else %}
+            <span class="inline-block bg-emerald-100 text-emerald-700 rounded px-1.5 text-xs">En curso</span>
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 text-right whitespace-nowrap">
+          <a href="/reporte?periodo_id={{ p.id }}" class="text-slate-600 hover:underline">Reporte</a>
+          {% if p.cerrado %}
+          <form method="post" action="/periodos/{{ p.id }}/reabrir" class="inline">
+            <button class="text-slate-600 hover:underline ml-2">Reabrir</button>
+          </form>
+          {% else %}
+          <form method="post" action="/periodos/{{ p.id }}/cerrar" class="inline" onsubmit="return confirm('¿Cerrar este periodo? Su fin quedará en hoy si está vacío.')">
+            <button class="text-slate-600 hover:underline ml-2">Cerrar</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/periodos/{{ p.id }}/eliminar" class="inline" onsubmit="return confirm('¿Eliminar este periodo? Los movimientos NO se borran.')">
+            <button class="text-red-600 hover:underline ml-2">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-3 py-8 text-center text-slate-400">Aún no hay periodos. Crea el primero arriba.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if mov else 'Nuevo' }} movimiento · TesoManager{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">{{ 'Editar movimiento' if mov else 'Nuevo movimiento' }}</h1>
+    <a href="/movimientos" class="text-sm text-slate-500 hover:underline">← Volver</a>
+  </div>
+
+  {% if error %}
+  <div class="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2 mb-4">{{ error }}</div>
+  {% endif %}
+
+  <form method="post"
+        action="{{ '/movimientos/' ~ mov.id ~ '/editar' if mov else '/movimientos/nuevo' }}"
+        class="bg-white rounded-xl shadow p-5 space-y-4"
+        data-pct-pastor="{{ pct_donacion_pastor }}">
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Tipo de movimiento</label>
+      {% if mov %}
+        <input type="hidden" name="tipo" value="{{ tipo }}">
+        <div class="px-3 py-2 bg-slate-100 rounded-lg text-sm">{{ tipo_label[tipo] }}</div>
+      {% else %}
+        <select name="tipo" id="tipo" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+          <option value="ofrenda" {% if tipo=='ofrenda' %}selected{% endif %}>Ofrenda</option>
+          <option value="diezmo" {% if tipo=='diezmo' %}selected{% endif %}>Diezmo</option>
+          <option value="donacion" {% if tipo=='donacion' %}selected{% endif %}>Donación a caja</option>
+          <option value="salida_caja" {% if tipo=='salida_caja' %}selected{% endif %}>Salida de caja</option>
+        </select>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-medium mb-1">Fecha</label>
+        <input name="fecha" type="date" required
+               value="{{ mov.fecha.isoformat() if mov else hoy().isoformat() }}"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Monto (MXN)</label>
+        <input name="monto" id="monto" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" required
+               value="{{ '%.2f'|format(mov.monto) if mov else '' }}"
+               placeholder="0.00"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2">
+      </div>
+    </div>
+
+    <!-- Campos de ofrenda / diezmo -->
+    <div data-group="ofrenda diezmo" class="space-y-3 border-t pt-3">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="recogido_por_tesorero" id="recogido_por_tesorero"
+               {% if not mov or mov.recogido_por_tesorero %}checked{% endif %}>
+        <span>Lo recogí yo (el tesorero)</span>
+      </label>
+      <div id="bloque_recogido_por" class="pl-6 {% if mov and mov.recogido_por_tesorero or not mov %}hidden{% endif %}">
+        <label class="block text-sm mb-1 text-slate-600">¿Quién lo recogió? (no genera entrega)</label>
+        <input name="recogido_por" value="{{ mov.recogido_por or '' if mov else '' }}"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Nombre de quien recogió">
+      </div>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="excluir_entrega" {% if mov and mov.excluir_entrega %}checked{% endif %}>
+        <span>Excluir de la entrega (evento / entregado a alguien especial)</span>
+      </label>
+    </div>
+
+    <!-- Donación del pastor (solo al crear un diezmo) -->
+    {% if not mov %}
+    <div data-group="diezmo" class="space-y-2 border-t pt-3 bg-emerald-50/50 -mx-5 px-5 py-3">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="generar_donacion_pastor" id="generar_donacion_pastor">
+        <span>El pastor dona parte de este diezmo a la caja</span>
+      </label>
+      <div id="bloque_donacion_pastor" class="pl-6 hidden">
+        <label class="block text-sm mb-1 text-slate-600">Monto de la donación ({{ pct_donacion_pastor }}% sugerido)</label>
+        <input name="monto_donacion_pastor" id="monto_donacion_pastor" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
+               placeholder="0.00"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2">
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Donación directa -->
+    <div data-group="donacion" class="border-t pt-3">
+      <label class="block text-sm font-medium mb-1">Origen de la donación</label>
+      <input name="origen" value="{{ mov.origen or '' if mov else '' }}"
+             class="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Ej.: donante particular, ofrenda especial…">
+    </div>
+
+    <!-- Salida de caja -->
+    <div data-group="salida_caja" class="border-t pt-3">
+      <label class="block text-sm font-medium mb-1">Motivo de la salida</label>
+      <input name="motivo" value="{{ mov.motivo or '' if mov else '' }}"
+             class="w-full border border-slate-300 rounded-lg px-3 py-2" placeholder="Ej.: compra de materiales, apoyo…">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Comentario (opcional)</label>
+      <textarea name="comentario" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2">{{ mov.comentario or '' if mov else '' }}</textarea>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button class="bg-slate-900 text-white rounded-lg px-5 py-2 font-medium hover:bg-slate-800">Guardar</button>
+      <a href="/movimientos" class="px-5 py-2 rounded-lg border hover:bg-slate-50">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const form = document.querySelector('form[data-pct-pastor]');
+    const tipoSel = document.getElementById('tipo');
+    const pctPastor = parseFloat(form.dataset.pctPastor || '30');
+
+    function tipoActual() {
+      return tipoSel ? tipoSel.value : "{{ tipo }}";
+    }
+
+    function refrescarGrupos() {
+      const t = tipoActual();
+      form.querySelectorAll('[data-group]').forEach(function (el) {
+        const grupos = el.dataset.group.split(' ');
+        el.classList.toggle('hidden', !grupos.includes(t));
+      });
+    }
+
+    // Mostrar "quién recogió" cuando NO lo recogió el tesorero
+    const chkRecogido = document.getElementById('recogido_por_tesorero');
+    const bloqueRecogido = document.getElementById('bloque_recogido_por');
+    function refrescarRecogido() {
+      if (chkRecogido && bloqueRecogido) {
+        bloqueRecogido.classList.toggle('hidden', chkRecogido.checked);
+      }
+    }
+
+    // Donación del pastor
+    const chkDon = document.getElementById('generar_donacion_pastor');
+    const bloqueDon = document.getElementById('bloque_donacion_pastor');
+    const inpMonto = document.getElementById('monto');
+    const inpMontoDon = document.getElementById('monto_donacion_pastor');
+    function refrescarDonacion() {
+      if (!chkDon || !bloqueDon) return;
+      bloqueDon.classList.toggle('hidden', !chkDon.checked);
+      if (chkDon.checked && inpMonto && inpMontoDon && !inpMontoDon.value) {
+        const m = parseFloat(inpMonto.value || '0');
+        if (m > 0) inpMontoDon.value = (m * pctPastor / 100).toFixed(2);
+      }
+    }
+
+    if (tipoSel) tipoSel.addEventListener('change', refrescarGrupos);
+    if (chkRecogido) chkRecogido.addEventListener('change', refrescarRecogido);
+    if (chkDon) chkDon.addEventListener('change', refrescarDonacion);
+    if (inpMonto) inpMonto.addEventListener('input', function () {
+      if (chkDon && chkDon.checked && inpMontoDon) {
+        const m = parseFloat(inpMonto.value || '0');
+        inpMontoDon.value = m > 0 ? (m * pctPastor / 100).toFixed(2) : '';
+      }
+    });
+
+    refrescarGrupos();
+    refrescarRecogido();
+    refrescarDonacion();
+  })();
+</script>
+{% endblock %}
