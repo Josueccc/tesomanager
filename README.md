@@ -1,6 +1,6 @@
 # TesoManager 💰
 
-> 🇬🇧 **English summary** — the rest of this README is in Spanish.
+> 🇬🇧 **English summary**.
 >
 > TesoManager is a self-hosted web app I use as a church treasurer to track
 > offerings, tithes, donations and cash withdrawals. It applies the organization's
